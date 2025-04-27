@@ -305,7 +305,7 @@ function __wbg_adapter_144(arg0, arg1, arg2, arg3) {
 /**
  * @enum {0 | 1}
  */
-export const ResponceType = Object.freeze({
+export const ClientRequestType = Object.freeze({
     MapRes: 0, "0": "MapRes",
     SentRes: 1, "1": "SentRes",
 });

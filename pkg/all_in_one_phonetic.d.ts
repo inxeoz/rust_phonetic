@@ -27,7 +27,7 @@ export function __wbgtest_console_warn(args: Array<any>): void;
  */
 export function __wbgtest_console_error(args: Array<any>): void;
 export function __wbgtest_cov_dump(): Uint8Array | undefined;
-export enum ResponceType {
+export enum ClientRequestType {
   MapRes = 0,
   SentRes = 1,
 }
