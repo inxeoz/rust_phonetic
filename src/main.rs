@@ -1,4 +1,4 @@
-use crate::PhoneticResponceType::{Map, Sent};
+
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -35,21 +35,21 @@ static CMU_SIMPLE_DICT: Lazy<Dict> =
 
 #[derive(Deserialize, Serialize, Debug)]
 #[wasm_bindgen]
-pub enum ResponceType {
+pub enum ClientRequestType {
     MapRes,
     SentRes,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub enum PhoneticResponceType {
-    Map(Vec<Pair>),
-    Sent(Vec<String>),
+    MapRes(Vec<Pair>),
+    SentRes(Vec<String>),
 }
 #[derive(Deserialize, Serialize, Debug)]
 #[wasm_bindgen]
 pub struct RequestData {
     text: String,
-    operation: ResponceType,
+    operation: ClientRequestType,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -121,14 +121,14 @@ impl PhoneticConverter {
 pub fn ConvertMainInner(req: &RequestData) -> ResponseData {
     let converter = &CONVERTER_INSTANCE;
     let response = match req.operation {
-        ResponceType::MapRes => {
+        ClientRequestType::MapRes => {
             let res = converter.convert(&req.text);
-            ResponseData { phonetic: Map(res) }
+            ResponseData { phonetic: PhoneticResponceType::MapRes(res) }
         }
-        ResponceType::SentRes => {
+        ClientRequestType::SentRes => {
             let res = converter.convert_sentence(&req.text);
             ResponseData {
-                phonetic: Sent(res),
+                phonetic: PhoneticResponceType::SentRes(res),
             }
         }
     };
@@ -156,7 +156,7 @@ use web_sys::console;
 fn test_wasm_convert() {
     let req = RequestData {
         text: "hello world".to_string(),
-        operation: ResponceType::MapRes,
+        operation: ClientRequestType::MapRes,
     };
 
     let js_value = serde_wasm_bindgen::to_value(&req).unwrap();
@@ -164,7 +164,7 @@ fn test_wasm_convert() {
 
     let output: ResponseData = serde_wasm_bindgen::from_value(res).unwrap();
     match output.phonetic {
-        Map(pairs) => {
+        PhoneticResponceType::MapRes(pairs) => {
             assert!(!pairs.is_empty());
             println!("{:?}", pairs);
             

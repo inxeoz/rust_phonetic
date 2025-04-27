@@ -3,7 +3,7 @@ import wasmModule from '../pkg/all_in_one_phonetic_bg.wasm'; // Direct import, n
 import index_html from '../index.html'
 
 let wasmInitialized = false;
-let converterInstance;
+
 
 // Ensure WASM is initialized
 async function ensureWasmInitialized() {
