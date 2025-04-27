@@ -1,0 +1,23 @@
+{
+  "name": "all_in_one_phonetic",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/inxeoz/rust_phonetic#readme",
+  "bugs": {
+    "url": "https://github.com/inxeoz/rust_phonetic/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/inxeoz/rust_phonetic.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "wrangler": "^4.13.2"
+  }
+}

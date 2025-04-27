@@ -1,0 +1,15 @@
+{
+  "name": "all_in_one_phonetic",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "all_in_one_phonetic_bg.wasm",
+    "all_in_one_phonetic.js",
+    "all_in_one_phonetic.d.ts"
+  ],
+  "main": "all_in_one_phonetic.js",
+  "types": "all_in_one_phonetic.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

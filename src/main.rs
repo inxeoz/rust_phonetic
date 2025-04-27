@@ -1,7 +1,9 @@
+use crate::PhoneticResponceType::{Map, Sent};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Mutex;
+use wasm_bindgen::JsValue;
+use wasm_bindgen::prelude::wasm_bindgen;
 
 type Dict = HashMap<String, String>;
 
@@ -25,42 +27,45 @@ fn parse_dict_from_bytes(bytes: &[u8], replacement: &str) -> Dict {
     parse_dict_from_str(&content)
 }
 
-macro_rules! load_dict {
-    ($name:ident, $path:expr) => {
-        static $name: Lazy<Mutex<Dict>> = Lazy::new(|| {
-            //let dict = parse_dict_from_str(include_str!($path));
-             let dict = parse_dict_from_bytes(include_bytes!($path), "🤖");
-            Mutex::new(dict)
-        });
-    };
+
+static IPA_DICT: Lazy<Dict> = Lazy::new(|| parse_dict_from_bytes(include_bytes!("en_UK.txt"), " "));
+
+static CMU_SIMPLE_DICT: Lazy<Dict> =
+    Lazy::new(|| parse_dict_from_bytes(include_bytes!("cmudict_simple.txt"), " "));
+
+#[derive(Deserialize, Serialize, Debug)]
+#[wasm_bindgen]
+pub enum ResponceType {
+    MapRes,
+    SentRes,
 }
 
-load_dict!(IPA_DICT, "en_UK.txt");
-load_dict!(CMU_SIMPLE_DICT, "cmudict_simple.txt");
-
-// static CMU_SIMPLE_DICT: Lazy<Mutex<Dict>> = Lazy::new(|| {
-//     let dict = parse_dict_from_bytes(include_bytes!("cmudict_simple.txt"), "🤖");
-//     Mutex::new(dict)
-// });
-
-
-#[derive(Deserialize)]
-struct RequestData {
+#[derive(Deserialize, Serialize, Debug)]
+pub enum PhoneticResponceType {
+    Map(Vec<Pair>),
+    Sent(Vec<String>),
+}
+#[derive(Deserialize, Serialize, Debug)]
+#[wasm_bindgen]
+pub struct RequestData {
     text: String,
+    operation: ResponceType,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
+#[wasm_bindgen]
 pub struct Pair {
     text: String,
     phonetic: String,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
+#[wasm_bindgen]
 pub struct ResponseData {
-    phonetic: Vec<Pair>,
-    phonetic_sentence: Option<String>
+    phonetic: PhoneticResponceType,
 }
 
+static  CONVERTER_INSTANCE: Lazy<PhoneticConverter> = Lazy::new(||PhoneticConverter::new());
 pub struct PhoneticConverter;
 
 impl PhoneticConverter {
@@ -68,14 +73,14 @@ impl PhoneticConverter {
         Self
     }
 
-    fn get_dicts(&self) -> (std::sync::MutexGuard<Dict>, std::sync::MutexGuard<Dict>) {
-        (IPA_DICT.lock().unwrap(), CMU_SIMPLE_DICT.lock().unwrap())
+    fn get_dicts(&self) -> (&'static Dict, &'static Dict) {
+        (&IPA_DICT, &CMU_SIMPLE_DICT)
     }
 
     pub fn convert_sentence(&self, input: &str) -> Vec<String> {
         let (ipa_dict, cmu_simple_dict) = self.get_dicts();
 
-        input
+        let phonetic = input
             .split_whitespace()
             .map(|word| {
                 let key = word.to_lowercase().replace(".", "");
@@ -85,10 +90,11 @@ impl PhoneticConverter {
                     .cloned()
                     .unwrap_or_else(|| word.to_string())
             })
-            .collect()
+            .collect();
+        phonetic
     }
 
-    pub fn convert(&self, input: &str) -> ResponseData {
+    pub fn convert(&self, input: &str) -> Vec<Pair> {
         let (ipa_dict, cmu_simple_dict) = self.get_dicts();
 
         let phonetic = input
@@ -108,18 +114,62 @@ impl PhoneticConverter {
             })
             .collect();
 
-        ResponseData { phonetic, phonetic_sentence:None }
+        phonetic
     }
 }
 
-fn main() {
-    
-    let text = "software like Aldus PageMaker including versions of Lorem Ipsum.".to_string();
-    let converter = PhoneticConverter::new();
+pub fn ConvertMainInner(req: &RequestData) -> ResponseData {
+    let converter = &CONVERTER_INSTANCE;
+    let response = match req.operation {
+        ResponceType::MapRes => {
+            let res = converter.convert(&req.text);
+            ResponseData { phonetic: Map(res) }
+        }
+        ResponceType::SentRes => {
+            let res = converter.convert_sentence(&req.text);
+            ResponseData {
+                phonetic: Sent(res),
+            }
+        }
+    };
 
-    let res = converter.convert("always");
-    let sent = converter.convert_sentence(&text);
+    response
+}
+#[wasm_bindgen]
+pub fn ConvertMain(req_js: JsValue) -> Result<JsValue, JsValue> {
+    let req : RequestData = serde_wasm_bindgen::from_value(req_js)?;
+    let response = ConvertMainInner(&req);
+    Ok(serde_wasm_bindgen::to_value(&response)?)
+}
 
-    println!("{:?}", res);
-    println!("{:?}", sent);
+use serde_wasm_bindgen::Error;
+fn main() -> Result<(), Error> {
+    Ok(())
+}
+
+
+use wasm_bindgen_test::wasm_bindgen_test;
+wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+use web_sys::console;
+
+#[wasm_bindgen_test]
+fn test_wasm_convert() {
+    let req = RequestData {
+        text: "hello world".to_string(),
+        operation: ResponceType::MapRes,
+    };
+
+    let js_value = serde_wasm_bindgen::to_value(&req).unwrap();
+    let res = ConvertMain(js_value).unwrap();
+
+    let output: ResponseData = serde_wasm_bindgen::from_value(res).unwrap();
+    match output.phonetic {
+        Map(pairs) => {
+            assert!(!pairs.is_empty());
+            println!("{:?}", pairs);
+            
+            console::log_1(&format!("{:?}", pairs).into());
+        } ,
+        _ => panic!("Expected Map response"),
+    }
 }

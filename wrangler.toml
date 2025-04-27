@@ -1,0 +1,5 @@
+name = "all-in-one-phonetic"  # Name of the worker
+main = "src/index.js"  # Entry point for your worker script
+compatibility_date = "2025-03-31"  # Compatibility date
+compatibility_flags = ["nodejs_compat"]  # Optional, include if using Node.js-specific APIs
+modules = true  # Enable ES modules (import/export)
